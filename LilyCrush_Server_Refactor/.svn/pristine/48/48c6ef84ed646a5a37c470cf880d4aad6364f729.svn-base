@@ -1,0 +1,33 @@
+package enums;
+
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.Map;
+
+public enum Avatar {
+	defaultImg(0),
+	hokain1 (1),
+	hokain2 (2),
+	hokain3 (3),
+	hokain4 (4),
+	hokain5 (5);
+	
+	 private static final Map<Integer,Avatar> search=new HashMap<Integer,Avatar>();       
+
+     static{      
+        for(Avatar type:EnumSet.allOf(Avatar.class)){      
+            search.put(type.getI(), type);      
+         }      
+   }      
+   private int i;      
+   Avatar(int i){      
+        this.i=i;      
+     }
+     public int getI(){      
+         return i;      
+	     }      
+	    //²éÕÒ      
+   public static Avatar get(int i){      
+         return search.get(i);      
+  }      
+}

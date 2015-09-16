@@ -1,0 +1,4 @@
+enums新增DropMode用于区别游戏中的下落方式
+PositionsGroup 继承了ArrayList类，新增add方法
+添加FillMap方法，用于填充产生消除后将地图填充更新
+贺壮壮 

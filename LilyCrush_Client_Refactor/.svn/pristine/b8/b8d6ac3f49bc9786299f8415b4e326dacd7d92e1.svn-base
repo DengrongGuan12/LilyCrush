@@ -1,0 +1,9 @@
+package client;
+
+import common.Info;
+
+public interface NetRead {
+	public void readInfo(Info info);
+	public void serverDead();
+	public void wrongIP();
+}

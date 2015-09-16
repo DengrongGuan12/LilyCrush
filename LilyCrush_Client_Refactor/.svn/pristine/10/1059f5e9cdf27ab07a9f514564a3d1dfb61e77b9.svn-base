@@ -1,0 +1,221 @@
+package view;
+
+import javax.swing.ImageIcon;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
+
+import javax.swing.JButton;
+
+import PublicInfo.MyInfo;
+import businesslogicService.FinancialBLService;
+import businesslogicService.GameBLService;
+import enums.Prop;
+
+import view.component.BackGroundPanel;
+import view.component.ClickButton;
+
+public class PurchasePanel extends BackGroundPanel {
+	private JButton startGameBtn;
+	private JLabel propALbl, propBLbl, propCLbl;
+	private JLabel restCoinLbl;
+	private PurchasePanel purchasePanel;
+	private JLabel chooseC, chooseD, chooseE;
+	private ChooseListener A_Listener, B_Listener, C_Listener;
+
+	private ClickButton backButton;
+
+	private MainFrame mainFrame;
+	private FinancialBLService financialBLService;
+	private GameBLService gameBLService;
+
+	public void setMainFrame(MainFrame mainFrame,
+			FinancialBLService financialBLService,
+			GameBLService gameBLService) {
+		this.mainFrame = mainFrame;
+		this.financialBLService = financialBLService;
+		this.gameBLService = gameBLService;
+		A_Listener = new ChooseListener(financialBLService, Prop.C,
+				restCoinLbl, chooseC);
+		B_Listener = new ChooseListener(financialBLService, Prop.C,
+				restCoinLbl, chooseD);
+		C_Listener = new ChooseListener(financialBLService, Prop.C,
+				restCoinLbl, chooseE);
+
+		propALbl.addMouseListener(A_Listener);
+		propBLbl.addMouseListener(B_Listener);
+		propCLbl.addMouseListener(C_Listener);
+	}
+
+	public PurchasePanel() {
+		initUI();
+	}
+
+	public void initUI() {
+		System.out.println("Purchasepanel.initUI()"); // TODO delete
+
+		removeAll();
+
+		this.setBounds(0, 0, 1000, 700);
+		this.setOpaque(false);
+		this.setLayout(null);
+
+		chooseC = new JLabel();
+		chooseC.setIcon(ImageHelper.getChooseIcon());
+		chooseC.setBounds(280, 288, 37, 35);
+		chooseC.setVisible(false);
+		this.add(chooseC);
+
+		chooseD = new JLabel();
+		chooseD.setIcon(ImageHelper.getChooseIcon());
+		chooseD.setBounds(549, 288, 37, 35);
+		chooseD.setVisible(false);
+		this.add(chooseD);
+
+		chooseE = new JLabel();
+		chooseE.setIcon(ImageHelper.getChooseIcon());
+		chooseE.setBounds(795, 288, 37, 35);
+		chooseE.setVisible(false);
+		this.add(chooseE);
+
+		propALbl = new JLabel(ImageHelper.getProp(Prop.C));
+		propALbl.setBounds(90, 98, 227, 225);
+		this.add(propALbl);
+
+		propBLbl = new JLabel(ImageHelper.getProp(Prop.D));
+		propBLbl.setBounds(359, 98, 227, 225);
+		this.add(propBLbl);
+
+		propCLbl = new JLabel(ImageHelper.getProp(Prop.E));
+		propCLbl.setBounds(605, 98, 227, 225);
+		this.add(propCLbl);
+
+		restCoinLbl = new JLabel("restCoin");
+		restCoinLbl.setBounds(555, 43, 61, 16);
+		this.add(restCoinLbl);
+
+		startGameBtn = new JButton("start game");
+		startGameBtn.setEnabled(true); // TODO changed to true
+		startGameBtn.setBounds(489, 344, 117, 29);
+		this.add(startGameBtn);
+
+		startGameBtn.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				purchasePanel.fadeOut();
+				gameBLService.startSingleGame();
+			}
+		});
+
+		ChangePanelListener changePanelListener = new ChangePanelListener();
+
+		ImageIcon backButtonIcon = new ImageIcon("images/返回.png");
+		backButton = new ClickButton("images/返回.png");
+		backButton.setBounds(30, 30, backButtonIcon.getIconWidth(),
+				backButtonIcon.getIconHeight());
+		backButton.addActionListener(changePanelListener);
+		backButton.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent arg0) {
+				A_Listener.init_State();
+				B_Listener.init_State();
+				C_Listener.init_State();
+				financialBLService.exitPurchasePanel();
+			}
+		});
+		this.add(backButton);
+
+		restCoinLbl.setText(MyInfo.getCoin() + "");
+		setVisible(false);
+
+		purchasePanel = this;
+	}
+
+	public void canStartOneGame() {
+		startGameBtn.setEnabled(true);
+	}
+
+	public void setCoin(int coin) {
+		restCoinLbl.setText(coin + "");
+	}
+
+	class ChangePanelListener implements ActionListener {
+
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			purchasePanel.fadeOut();
+			if (e.getSource() == backButton) {
+				mainFrame.changePanel("OptionPanel");
+				chooseC.setVisible(false);
+				chooseD.setVisible(false);
+				chooseE.setVisible(false);
+			}
+		}
+	}
+}
+
+class ChooseListener implements MouseListener {
+	private FinancialBLService financialBLService;
+	private Prop prop;
+	private JLabel coinLabel;
+	private JLabel checkLabel;
+	public int i = 0;
+
+	public ChooseListener(FinancialBLService financialBLService, Prop p,
+			JLabel coinLabel, JLabel checkLabel) {
+		this.financialBLService = financialBLService;
+		this.prop = p;
+		this.coinLabel = coinLabel;
+		this.checkLabel = checkLabel;
+	}
+
+	public void init_State() {
+		i = 0;
+	}
+
+	private void updateI() {
+		i = (i + 1) % 2;
+	}
+
+	@Override
+	public void mouseClicked(MouseEvent e) {
+		updateI();
+		if (i == 1) { // 选中
+			if (!(financialBLService.chooseProp(prop))) {
+
+				JOptionPane.showMessageDialog(null, " 金币数不够", "提示",
+						JOptionPane.INFORMATION_MESSAGE);
+				updateI();
+			} else {
+				checkLabel.setVisible(true);
+			}
+		} else {
+			financialBLService.noChooseProp(prop);
+			checkLabel.setVisible(false);
+		}
+		// 设置界面显示的金币数
+		coinLabel.setText(financialBLService.getMyCoins() + "");
+	}
+
+	@Override
+	public void mouseEntered(MouseEvent e) {
+	}
+
+	@Override
+	public void mouseExited(MouseEvent e) {
+	}
+
+	@Override
+	public void mousePressed(MouseEvent e) {
+	}
+
+	@Override
+	public void mouseReleased(MouseEvent e) {
+	}
+}

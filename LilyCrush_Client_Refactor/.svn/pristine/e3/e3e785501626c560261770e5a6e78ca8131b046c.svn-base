@@ -1,0 +1,9 @@
+package businesslogicService;
+
+
+public interface UserDataBLService {
+	/*
+	 * 显示个人信息时需要调用的接口
+	 */
+	public void showPersonalInfo();
+}

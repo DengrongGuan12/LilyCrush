@@ -1,0 +1,393 @@
+package client;
+
+import businesslogicService.FinancialBLService;
+import businesslogicService.FriendBLService;
+import businesslogicService.GameBLService;
+import businesslogicService.LoginBLService;
+import businesslogicService.RankingBLService;
+import businesslogicService.RegisterBLService;
+import businesslogicService.RoomBLService;
+import businesslogicService.SettingBLService;
+import view.MainFrame;
+import PublicInfo.MyInfo;
+import common.AddFriendInfo;
+import common.AddedCoinsInfo;
+import common.ChangeReadyStateInfo;
+import common.FinalScoreInfo;
+import common.FindCooprtGame;
+import common.FriendsListInfo;
+import common.Info;
+import common.InviteFriendInfo;
+import common.MapRefreshInfo;
+import common.MultiGameRankInfo;
+import common.NewMapInfo;
+import common.NewRoomInfo;
+import common.NotifyOnlineInfo;
+import common.PersonalInfo;
+import common.PromptInfo;
+import common.SingleGameHistoryInfo;
+import common.SingleGameRankInfo;
+import common.SwapInfo;
+import common.TimeInfo;
+
+public class GameManager implements NetRead {
+
+	private FriendBLService friendBL;
+	private LoginBLService loginBL;
+	private FinancialBLService financialBL;
+	private RegisterBLService registerBL;
+	private SettingBLService settingBL;
+	private GameBLService gameBL;
+	private RoomBLService roomBL;
+	private RankingBLService rankingBL;
+
+	private MainFrame mainFrame;
+	private MyClient myClient;
+	private String ip = "127.0.0.1";
+
+	public void setMainFrame(MainFrame mainFrame) {
+		this.mainFrame = mainFrame;
+		this.friendBL.setMainFrame(mainFrame);
+		this.friendBL.setFriendsPanel(this.mainFrame.getFriendsPanel());
+		this.loginBL.setLoginPanel(this.mainFrame.getLoginPanel());
+		this.registerBL.setMainFrame(mainFrame);
+		this.registerBL.setRegisterPanel(this.mainFrame.getRegisterPanel());
+		this.settingBL.setMainFrame(mainFrame);
+		this.settingBL.setSettingPanel(this.mainFrame.getSettingsPanel());
+		this.gameBL.setGamePanel(this.mainFrame.getSingleGamePanel());
+		this.roomBL.setMainFrame(mainFrame);
+		this.roomBL.setRoomPanel(this.mainFrame.getRoomPanel());
+		this.rankingBL.setMainFrame(mainFrame);
+		this.rankingBL.setRankingPanel(this.mainFrame.getRankingPanel());
+	}
+
+	public GameManager() {
+		this.friendBL = new FriendBL();
+		this.loginBL = new LoginBL();
+		this.financialBL = new FinancialBL();
+		this.registerBL = new RegisterBL();
+		this.settingBL = new SettingBL();
+		this.gameBL = new GameBL();
+		this.roomBL = new RoomBL();
+		this.rankingBL = new RankingBL();
+	}
+
+	public void setIP(String ip) {
+		this.ip = ip;
+
+	}
+
+	public String getIP() {
+		return this.ip;
+	}
+
+	public void connectToServer() {
+		this.myClient = new MyClient(this.ip, this);
+		this.friendBL.setMyClient(this.myClient);
+		this.gameBL.setMyClient(this.myClient);
+		this.roomBL.setMyClient(this.myClient);
+		this.rankingBL.setMyClient(this.myClient);
+		this.registerBL.setMyClient(this.myClient);
+
+	}
+
+	@Override
+	public void readInfo(Info info) {
+
+		switch (info.getMessage()) {
+		case loginSuc: {
+			this.loginBL.loginSuc();
+			this.friendBL.getFriendList();
+			break;
+		}
+
+		case personalInfo: {
+			PersonalInfo personalInfo = (PersonalInfo) info;
+			this.financialBL.setCoins(personalInfo.getCoins());
+			MyInfo.setInfo(personalInfo.getNickname(), personalInfo.getId(),
+					personalInfo.getBriefIntroduction(),
+					personalInfo.getAvatar(), personalInfo.getCoins());
+			break;
+		}
+
+		case loginFail: {
+			this.loginBL.loginFail();
+			break;
+		}
+		case hasLogin: {
+			// TODO
+			/*
+			 * 需要一个提示已经登录的窗口
+			 */
+			this.loginBL.hasLogin();
+			break;
+
+		}
+
+		case registerSuc: {
+			this.registerBL.regSuc();
+			break;
+		}
+
+		case registerFail: {
+			this.registerBL.regFail();
+			break;
+		}
+
+		case changePasswdSuc: {
+			this.settingBL.changePasswdSuc();
+			break;
+		}
+
+		case canStOneGame: {
+			// 可以开始单人游戏
+			// this.singleGamePanel.canStartOneGame();
+			// TODO ????
+			this.mainFrame.getPurchasePanel();
+			break;
+		}
+
+		case startSuperModel: {
+			this.gameBL.startSuper();
+			break;
+		}
+		case endSuperModel: {
+			this.gameBL.endSuper();
+			break;
+		}
+
+		case prompt: {
+			PromptInfo promptInfo = (PromptInfo) info;
+			this.gameBL.prompt(promptInfo);
+			break;
+		}
+
+		case gameOver: {
+			this.gameBL.end();
+			break;
+		}
+		case finalScore: {
+			FinalScoreInfo finalScoreInfo = (FinalScoreInfo) info;
+			this.gameBL.setFinalScore(finalScoreInfo);
+			break;
+		}
+		case addedCoins: {
+			AddedCoinsInfo addedCoinsInfo = (AddedCoinsInfo) info;
+			int coins = addedCoinsInfo.getCoins();
+			// TODO
+			/*
+			 * 需要一个提示玩家该局游戏获取多少金币数
+			 */
+			break;
+		}
+		case swapPositions: {
+			SwapInfo swapInfo = (SwapInfo) info;
+			this.gameBL.setSwapInfo(swapInfo);
+			this.gameBL.swapMap();
+			break;
+		}
+		case noCrash: {
+			this.gameBL.swapMap();
+			break;
+		}
+
+		case crash: {
+			MapRefreshInfo mapRefreshInfo = (MapRefreshInfo) info;
+			this.gameBL.crash(mapRefreshInfo);
+			break;
+		}
+
+		case roomFadeOut: {
+			this.roomBL.roomFadeOut();
+			break;
+		}
+		case newMap: {
+			NewMapInfo newMapInfo = (NewMapInfo) info;
+			this.gameBL.initialMap(newMapInfo);
+			break;
+		}
+		case lockMap: {
+			this.gameBL.lockMap();
+			break;
+		}
+
+		case unlockMap: {
+			this.gameBL.unlockMap();
+			break;
+		}
+		case cannotFindCooprtGame: {
+			this.roomBL.askCreateARoom();
+			break;
+		}
+
+		case canStartCooprtGame: {
+			this.roomBL.askIfStartCooprtGame();
+			break;
+		}
+
+		case GameStart: {
+			this.gameBL.start();
+			break;
+		}
+
+		case findCooprtGame: {
+			FindCooprtGame findCooprtGame = (FindCooprtGame) info;
+			this.roomBL.findCooprateRoom(findCooprtGame);
+			break;
+		}
+		case changeReadyState: {
+			ChangeReadyStateInfo changeReadyStateInfo = (ChangeReadyStateInfo) info;
+			this.roomBL.changeReadyState(changeReadyStateInfo);
+			break;
+		}
+
+		case refreshRoomInfo: {
+			NewRoomInfo newRoomInfo = (NewRoomInfo) info;
+			this.roomBL.refreshRoom(newRoomInfo);
+			break;
+		}
+
+		case friendsList: {
+			FriendsListInfo friendsListInfo = (FriendsListInfo) info;
+			this.friendBL.showFriendsList(friendsListInfo);
+			break;
+		}
+		case notifyOnlineInfo: {
+			NotifyOnlineInfo notifyOnlineInfo = (NotifyOnlineInfo) info;
+			this.friendBL.changeOnlineInfo(notifyOnlineInfo);
+			break;
+		}
+
+		case deleteFriendSuc: {
+			this.friendBL.deleteFriendSuc();
+			break;
+		}
+
+		case deleteFriendFail: {
+			this.friendBL.deleteFriendFail();
+			break;
+		}
+
+		case friendToAddedOffline: {
+			this.friendBL.friendToAddedOffline();
+			break;
+		}
+
+		case addFriend: {
+			AddFriendInfo addFriendInfo = (AddFriendInfo) info;
+			this.friendBL.askIfBecomeFriend(addFriendInfo);
+			break;
+		}
+
+		case agreeToBecomeFriend: {
+			AddFriendInfo agreeToBecomeFriendInfo = (AddFriendInfo) info;
+			this.friendBL.agreeToBecomeFriend(agreeToBecomeFriendInfo);
+			break;
+		}
+
+		case addFriendFail: {
+			this.friendBL.addFriendFail();
+			break;
+		}
+
+		case refuseToBecomeFriend: {
+			AddFriendInfo addFriendInfo = (AddFriendInfo) info;
+			this.friendBL.refuseToBecomeFriends(addFriendInfo);
+			break;
+		}
+
+		case friendToInvitedCooperateOffline: {
+			this.roomBL.friendToInvitedOffLine();
+			break;
+		}
+		case friendToInvitedCooperateInRoom: {
+			// TODO
+			/*
+			 * 被邀好友已经在该房间里面
+			 */
+			break;
+		}
+
+		case inviteFriendCooperate: {
+			InviteFriendInfo inviteFriendInfo = (InviteFriendInfo) info;
+			this.roomBL.askIfAgreeInvitedToCooperateGame(inviteFriendInfo);
+			break;
+		}
+
+		case cooperateGameHasStart: {
+
+			this.roomBL.cooperateGameHasStart();
+			break;
+		}
+
+		case cooperateGameEnoughPlayer: {
+
+			this.roomBL.enoughPlayer();
+			break;
+		}
+
+		case refuseInvitedToCooperateGame: {
+			InviteFriendInfo inviteFriendInfo = (InviteFriendInfo) info;
+			this.roomBL.refuseInvitedToCooperateGame(inviteFriendInfo);
+			break;
+		}
+
+		case cannotStartCooperateGame: {
+			this.roomBL.cannotStartGame();
+			break;
+		}
+
+		case SingleHistoryData: {
+			SingleGameHistoryInfo singleGameHistoryInfo = (SingleGameHistoryInfo) info;
+			this.rankingBL.showSingleGameHistory(singleGameHistoryInfo);
+			break;
+		}
+
+		case singleGameRankInfo: {
+			SingleGameRankInfo singleGameRankInfo = (SingleGameRankInfo) info;
+			this.rankingBL.showSingleGameOverallItems(singleGameRankInfo);
+			break;
+		}
+		case multiGameHistoryRank: {
+			MultiGameRankInfo multiGameRankInfo = (MultiGameRankInfo) info;
+			this.rankingBL.showMultiGameRank(multiGameRankInfo);
+			break;
+		}
+		case changeAvatarSuc: {
+			this.settingBL.changeAvatarSuc();
+			break;
+		}
+		case changeAvatarFail: {
+			/*
+			 * 修改头像失败的接口 public void changeAvatarFail(){}
+			 */
+			break;
+		}
+		case cannotStartCooprateGame_exception: {
+			this.roomBL.cannotStartGameHint();
+			break;
+		}
+		case timeInfo: {
+			TimeInfo timeInfo = (TimeInfo) info;
+			this.gameBL.setTime(timeInfo);
+			break;
+		}
+
+		default:
+			break;
+		}
+
+	}
+
+	@Override
+	public void serverDead() {
+		// TODO
+	}
+
+	@Override
+	public void wrongIP() {
+		this.mainFrame.wrongIp();
+
+	}
+
+}

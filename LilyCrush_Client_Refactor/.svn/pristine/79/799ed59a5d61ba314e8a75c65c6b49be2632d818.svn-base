@@ -1,0 +1,25 @@
+package common;
+
+import enums.Avatar;
+
+
+
+public class ChangeAvatarInfo extends Info{
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+	private Avatar avatar;
+	public Avatar getAvatar() {
+		return avatar;
+	}
+	public void setAvatar(Avatar avatar) {
+		this.avatar = avatar;
+	}
+	public ChangeAvatarInfo(Avatar avatar){
+		super(Message.changeAvatar);
+		this.setAvatar(avatar);
+		
+	}
+
+}

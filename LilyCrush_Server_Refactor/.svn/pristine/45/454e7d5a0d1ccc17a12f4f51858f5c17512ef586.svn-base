@@ -1,0 +1,828 @@
+package model;
+
+import java.io.IOException;
+import java.io.ObjectOutputStream;
+import java.net.Socket;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+
+import model.managers.GamesManager;
+import model.managers.PlayersManager;
+import model.managers.RoomsManager;
+import pos.FriendInfoPO;
+import pos.PersonalInfoPO;
+import pos.RelationPO;
+import pos.SecurityPO;
+import pos.historyPO.MultiGameHistoryItem;
+import common.Info;
+import common.financialInfo.AddedCoinsInfo;
+import common.friendInfo.AddFriendInfo;
+import common.friendInfo.DeleteFriendInfo;
+import common.friendInfo.Friend;
+import common.friendInfo.FriendsListInfo;
+import common.friendInfo.NotifyOnlineInfo;
+import common.gameInfo.OneInitGameInfo;
+import common.gameInfo.Position;
+import common.gameInfo.SwapInfo;
+import common.gameInfo.UsePropInfo;
+import common.loginInfo.LoginInfo;
+import common.rankingInfo.MultiGameRankInfo;
+import common.rankingInfo.MultiOverallItemInfo;
+import common.rankingInfo.SingleGameHistoryInfo;
+import common.rankingInfo.SingleGameHistoryItemInfo;
+import common.rankingInfo.SingleGameOverallItemInfo;
+import common.rankingInfo.SingleGameRankInfo;
+import common.registerInfo.RegInfo;
+import common.roomInfo.FindCooprtGame;
+import common.roomInfo.InviteFriendInfo;
+import common.roomInfo.JoinCooprtGame;
+import common.settingInfo.ChangeAvatarInfo;
+import common.settingInfo.ChangePasswdInfo;
+import common.settingInfo.PersonalInfo;
+import dataService.MultiHistoryDataService;
+import dataService.MultiOverallDataService;
+import dataService.MultiOverallItem;
+import dataService.PersonalInfoDataService;
+import dataService.RelationDataService;
+import dataService.SecurityDataService;
+import dataService.SingleHistoryDataService;
+import dataService.SingleOverallDataService;
+import dataService.SingleOverallItem;
+import dataserviceImpli.MultiGameHistoryDataServiceImpli;
+import dataserviceImpli.PersonalInfoDataServiceImpli;
+import dataserviceImpli.RelationDataServiceImpli;
+import dataserviceImpli.SecurityDataServiceImpli;
+import dataserviceImpli.SingleGameHistoryDataServiceImpli;
+import enums.Avatar;
+import enums.Message;
+import server.ReadThread;
+
+/*
+ * 玩家类，每个玩家持有自己的读写socket
+ */
+public class Player {
+	private int ID;
+	private int GameID;
+	private int RoomID;
+
+	public int getRoomID() {
+		return RoomID;
+	}
+
+	public void setRoomID(int roomID) {
+		RoomID = roomID;
+	}
+
+	public int getGameID() {
+		return GameID;
+	}
+
+	public void setGameID(int gameID) {
+		GameID = gameID;
+	}
+
+	/*
+	 * 协作游戏时需要用到的玩家的准备状态
+	 */
+	private boolean ready;
+	private PersonalInfoDataServiceImpli personalInfoDataService;
+	private RelationDataServiceImpli relationDataService;
+	private SecurityDataServiceImpli securityDataService;
+	private SingleGameHistoryDataServiceImpli singleGameHistoryDataService;
+	private MultiGameHistoryDataServiceImpli multiGameHistoryDataService;
+	private SingleOverallDataService singleOverallDataService;
+	private MultiOverallDataService multiOverallDataService;
+
+	public void setMultiOverallDataService(
+			MultiOverallDataService multiOverallDataService) {
+		this.multiOverallDataService = multiOverallDataService;
+	}
+
+	public void setSingleOverallDataService(
+			SingleOverallDataService singleOverallDataService) {
+		this.singleOverallDataService = singleOverallDataService;
+	}
+
+	public void setSingleGameHistoryDataService(
+			SingleGameHistoryDataServiceImpli singleGameHistoryDataService) {
+		this.singleGameHistoryDataService = singleGameHistoryDataService;
+	}
+
+	public void setSecurityDataService(
+			SecurityDataServiceImpli securityDataService) {
+		this.securityDataService = securityDataService;
+	}
+
+	public void setRelationDataService(
+			RelationDataServiceImpli relationDataService) {
+		this.relationDataService = relationDataService;
+	}
+
+	public void setPersonalInfoDataService(
+			PersonalInfoDataServiceImpli personalInfoDataService) {
+		this.personalInfoDataService = personalInfoDataService;
+	}
+
+	public boolean isReady() {
+		return ready;
+	}
+
+	public void setReady(boolean ready) {
+		this.ready = ready;
+	}
+
+	private Socket socketIn = null, socketOut = null;
+
+	public void setSocketIn(Socket socketIn) {
+		this.socketIn = socketIn;
+	}
+
+	public void setSocketOut(Socket socketOut) {
+		this.socketOut = socketOut;
+	}
+
+	private ReadThread readThread = null;
+	private ObjectOutputStream writer;
+
+	public int getID() {
+		return ID;
+	}
+
+	public void setID(int iD) {
+		ID = iD;
+	}
+
+	/*
+	 * 下面是一些玩家信息
+	 */
+	private String name="";// 用户名
+
+	public String getName() {
+		return name;
+	}
+
+	public void setName(String name) {
+		this.name = name;
+	}
+
+	private String passwd="";// 密码
+
+	public String getPasswd() {
+		return passwd;
+	}
+
+	public void setPasswd(String passwd) {
+		this.passwd = passwd;
+	}
+
+	private String nickname="";// 昵称
+
+	public String getNickname() {
+		return nickname;
+	}
+
+	public void setNickname(String nickname) {
+		this.nickname = nickname;
+	}
+
+	private int coins=0;// 金币数量
+
+	public int getCoins() {
+		return coins;
+	}
+
+	public void setCoins(int coins) {
+		this.coins = coins;
+	}
+
+	private Avatar imageType=Avatar.hokain1;
+
+	public Avatar getImageType() {
+		return imageType;
+	}
+
+	public void setImageType(Avatar imageType) {
+		this.imageType = imageType;
+	}
+
+	private String briefIntroduction="";
+
+	public String getBriefIntroduction() {
+		return briefIntroduction;
+	}
+
+	public void setBriefIntroduction(String briefIntroduction) {
+		this.briefIntroduction = briefIntroduction;
+	}
+
+	public void addCoins(int coin){
+		this.coins+=coin;
+		this.personalInfoDataService.updateCoins(this.name, this.coins);
+		Info addedCoinsInfo=new AddedCoinsInfo(coin);
+		this.write(addedCoinsInfo);
+		
+	}
+	private char login(String name,String passwd) {
+		char success = 'a';
+
+		String passwd1 = this.securityDataService.getPswd(name);
+		if ((passwd1!=null)&&(passwd1.equals(passwd))) {
+			PlayersManager playersManager=PlayersManager.getInstance();
+			if(playersManager.hasLogin(name)){
+				System.out.println("该用户已经登录");
+				success='c';
+			}else {
+				success = 'b';
+				PersonalInfoPO po = this.personalInfoDataService.getInfo(name);
+				this.setName(name);
+				this.setPasswd(passwd1);
+				this.setCoins(po.getCoin());
+				this.setNickname(po.getNickname());
+				this.setImageType(po.getAvatar());
+				this.setBriefIntroduction(po.getBriefIntroduction());
+			}
+			
+		}
+		return success;
+	}
+
+	private boolean register(String name,String passwd,String nickname) {
+		boolean success = false;
+		PersonalInfoPO po = new PersonalInfoPO(name, nickname,
+				Avatar.hokain1, "no content!", 0);
+		SecurityPO securityPO = new SecurityPO(name, passwd);
+		if (!this.securityDataService.ifExist(name)&&this.personalInfoDataService.insertInfo(po)
+				&& this.securityDataService.insertRecord(securityPO)) {
+//			this.setName(name);
+			this.setPasswd(passwd);
+			this.setNickname(nickname);
+			this.setCoins(0);
+			this.setImageType(Avatar.hokain1);
+			this.setBriefIntroduction("no content!");
+			success = true;
+		}
+		return success;
+	}
+	private void updateFriendsOnlineInfo(){
+		ArrayList<Player> playersList = new ArrayList<Player>();
+		PlayersManager playersManager = PlayersManager.getInstance();
+		playersList=playersManager.getOnlinePlayers();
+		
+		ArrayList<FriendInfoPO> friendList = relationDataService.getFriendList(this.name);
+		
+		for(Player player: playersList){
+			String id = player.getName();
+			for (FriendInfoPO item: friendList) {
+				if(item.getId().equals(id)){
+					Info notifyOnlineInfo = new NotifyOnlineInfo(this.name);
+					player.write(notifyOnlineInfo);
+				}
+			}
+		}
+	}
+
+	private void changePasswd(String newPasswd) {
+		SecurityPO po = new SecurityPO(this.name, newPasswd);
+		this.securityDataService.updatePswd(po);
+	}
+
+	private boolean changeAvatar(Avatar newAvatar) {
+		PersonalInfoPO personalInfoPO = new PersonalInfoPO(this.name,
+				this.nickname, newAvatar, this.briefIntroduction, this.coins);
+		return this.personalInfoDataService.updateInfo(personalInfoPO);
+	}
+
+	public Player(int iD, Socket socketIn, Socket socketOut) {
+		this.setID(iD);
+		this.setSocketIn(socketIn);
+		this.setSocketOut(socketOut);
+		this.initReadThread();
+		this.initPrintWriter();
+
+		this.setPersonalInfoDataService(new PersonalInfoDataService());
+		this.setRelationDataService(new RelationDataService());
+		this.setSecurityDataService(new SecurityDataService());
+		this.setSingleGameHistoryDataService(new SingleHistoryDataService());
+		this.multiGameHistoryDataService=new MultiHistoryDataService();
+		this.setSingleOverallDataService(new SingleOverallDataService());
+		this.setMultiOverallDataService(new MultiOverallDataService());
+
+	}
+
+	private void initPrintWriter() {
+
+		try {
+			this.writer = new ObjectOutputStream(socketOut.getOutputStream());
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+	}
+
+	public boolean write(Info info) {
+		if (this.writer == null) {
+			return false;
+		}
+		try {
+			System.out.println("向客户端发送。。。"+this.getName()+" " + info.getMessage());
+			this.writer.reset();
+			this.writer.writeObject(info);
+			this.writer.flush();
+			System.out.println("向客户端发送完" + info.getMessage());
+		} catch (Exception e) {
+			return false;
+		}
+		return true;
+	}
+
+	private void initReadThread() {
+		this.readThread = new ReadThread(socketIn, this);
+		this.readThread.start();
+	}
+
+	/*
+	 * 处理读
+	 */
+	@SuppressWarnings("unchecked")
+	public void read(Info info) {
+		switch (info.getMessage()) {
+		case login: {
+			LoginInfo loginInfo = (LoginInfo) info;
+			char success=this.login(loginInfo.getName(),loginInfo.getPasswd());
+			//TODO
+			System.out.println(success);
+			if (success=='b') {
+				this.write(new Info(Message.loginSuc));
+				Info personInfo = new PersonalInfo(this.name,
+						this.briefIntroduction, this.nickname, this.imageType,
+						this.coins);
+				this.write(personInfo);
+				this.updateFriendsOnlineInfo();
+
+			} else if(success=='a'){
+				this.write(new Info(Message.loginFail));
+			}else {
+				this.write(new Info(Message.hasLogin));
+				
+			}
+			break;
+		}
+
+		case register: {
+			RegInfo regInfo = (RegInfo) info;
+			
+			if (this.register(regInfo.getName(),regInfo.getPasswd(),regInfo.getNickname())) {
+				this.write(new Info(Message.registerSuc));
+			} else {
+				this.write(new Info(Message.registerFail));
+			}
+			break;
+		}
+
+		case changePasswd: {
+			ChangePasswdInfo changePasswdInfo = (ChangePasswdInfo) info;
+			this.changePasswd(changePasswdInfo.getNewPasswd());
+			this.write(new Info(Message.changePasswdSuc));
+			break;
+		}
+
+		case initOneGame: {
+			/*
+			 * 单人游戏
+			 */
+
+			OneInitGameInfo oneInitGameInfo = (OneInitGameInfo) info;
+			Room.roomId++;
+			this.GameID = Room.roomId;
+			Game game = new Game(this.GameID);
+			game.addPlayer(this);
+			game.init(oneInitGameInfo.getMulCrash(),
+					oneInitGameInfo.getPromptTime(), oneInitGameInfo.isHasD());
+			/*
+			 * 写入更新数据库中的金币数据
+			 */
+			this.coins -= oneInitGameInfo.getCostCoins();
+			this.personalInfoDataService.updateCoins(this.name, this.coins);
+
+			GamesManager gamesManager = GamesManager.getInstance();
+			gamesManager.addGame(game);
+			game.broadcastMap();
+			this.write(new Info(Message.canStOneGame));
+			break;
+		}
+		case stOneGame: {
+			GamesManager gamesManager = GamesManager.getInstance();
+			Game game = gamesManager.getGame(this.GameID);
+			game.start();
+			break;
+		}
+		case pauseSingleGame:{
+			System.out.println("收到暂停游戏的消息！！！");
+			GamesManager gamesManager=GamesManager.getInstance();
+			Game game=gamesManager.getGame(this.GameID);
+			game.pause();
+			break;
+		}
+		case continueSingleGame:{
+			GamesManager gamesManager=GamesManager.getInstance();
+			Game game=gamesManager.getGame(this.GameID);
+			game.resume();
+			break;
+		}
+		case exitGame:{
+			GamesManager gamesManager=GamesManager.getInstance();
+			Game game=gamesManager.getGame(this.GameID);
+			if(game!=null){
+				game.removePlayer(this.ID);
+			}
+			if(game.getPlayersNum()==0){
+				game.destroySelf();
+				gamesManager.removeGame(this.GameID);
+			}
+			break;
+		}
+		case swapPositions: {
+			System.out.println("接收到交换坐标的命令！");
+			SwapInfo swapInfo = (SwapInfo) info;
+			GamesManager gamesManager = GamesManager.getInstance();
+			Game game = gamesManager.getGame(this.GameID);
+			game.broadcastSwapInfo(swapInfo, this.ID);
+			game.swap(swapInfo.getP1(), swapInfo.getP2());
+			break;
+		}
+		case CooperationGame: {
+			System.out.println("接受到玩家协作游戏的请求！我要去房间池中找一个符合条件的房间");
+			RoomsManager roomsManager = RoomsManager.getInstance();
+			Room room = roomsManager.findCooprtRoom();
+			if (room== null) {
+				// 没有符合条件的协作房间
+				System.out.println("没有找到合适的协作房间！");
+				this.write(new Info(Message.cannotFindCooprtGame));
+			} else {
+				System.out.println("找到合适的协作房间！");
+				ArrayList<PersonalInfo> personalInfos = new ArrayList<PersonalInfo>();
+				personalInfos = room.getPlayersInfo();
+				PersonalInfo personalInfo = room.getRoomHostPlayerInfo();
+				Info findCooprtGameInfo = new FindCooprtGame(room.getRoomID(),
+						personalInfos, personalInfo);
+				this.write(findCooprtGameInfo);
+			}
+			break;
+		}
+		case createCooprtGame: {
+			System.out.println("收到创建协作房间的请求！");
+//			CooprtGameInitInfo cooprtGameInitInfo = (CooprtGameInitInfo) info;
+			Room.roomId++;
+			this.RoomID = Room.roomId;
+			this.GameID=this.RoomID;
+			Room room = new Room(this.RoomID);
+			room.setRoomHostPlayer(this);
+			room.addPlayer(this);
+			RoomsManager roomsManager=RoomsManager.getInstance();
+			roomsManager.addRoom(room);
+			this.setReady(true);
+			room.broadcastPlayersInfo();
+			break;
+		}
+		case readyForCooprtGame: {
+			this.setReady(true);
+			RoomsManager roomsManager = RoomsManager.getInstance();
+			Room room = roomsManager.getRoom(this.RoomID);
+			room.someOneChangeState(this.name);
+			room.checkCanStart();
+			break;
+		}
+		case noReadyForCooprtGame: {
+			this.setReady(false);
+			RoomsManager roomsManager = RoomsManager.getInstance();
+			Room room = roomsManager.getRoom(this.RoomID);
+			room.someOneChangeState(this.name);
+			room.checkCanStart();
+			break;
+		}
+		case startCooprtGame: {
+			RoomsManager roomsManager = RoomsManager.getInstance();
+			Room room = roomsManager.getRoom(this.RoomID);
+			room.startGame();
+			break;
+		}
+		case joinCooprtGame: {
+			JoinCooprtGame joinCooprtGame = (JoinCooprtGame) info;
+			this.RoomID = joinCooprtGame.getGameID();
+			RoomsManager roomsManager = RoomsManager.getInstance();
+			Room room = roomsManager.getRoom(this.RoomID);
+			if (room == null) {
+				this.write(new Info(Message.cooperateGameHasStart));
+			} else {
+				char c = room.addPlayer(this);
+				if (c == 'a') {
+					this.GameID = this.RoomID;
+					room.broadcastPlayersInfo();
+				} else {
+					this.write(new Info(Message.cooperateGameEnoughPlayer));
+				}
+			}
+			break;
+		}
+		case getFriendsList: {
+			ArrayList<Friend> friends = new ArrayList<Friend>();
+			friends = this.getFriendsList();
+			Info friendsListInfo = new FriendsListInfo(friends);
+			this.write(friendsListInfo);
+			break;
+		}
+		case deleteFriend: {
+			DeleteFriendInfo deleteFriendInfo = (DeleteFriendInfo) info;
+			if (this.deleteFriend(deleteFriendInfo.getName())) {
+				this.write(new Info(Message.deleteFriendSuc));
+			} else {
+				this.write(new Info(Message.deleteFriendFail));
+			}
+			break;
+		}
+		case addFriend: {
+			AddFriendInfo addFriendInfo = (AddFriendInfo) info;
+			String name = addFriendInfo.getName();
+			PlayersManager playersManager = PlayersManager.getInstance();
+			if (!playersManager.becomeFriend(this.nickname, this.name, name)) {
+				/*
+				 * 对方不在线
+				 */
+				this.write(new Info(Message.friendToAddedOffline));
+			}
+			break;
+		}
+		case agreeToBecomeFriend: {
+			AddFriendInfo agreeToBecomeFriendInfo = (AddFriendInfo) info;
+			String name = agreeToBecomeFriendInfo.getName();
+			PlayersManager playersManager = PlayersManager.getInstance();
+			if (this.becomeFriend(name)) {
+
+				playersManager.agreeToBecomeFriend(this.nickname, this.name,
+						name);
+			} else {
+				/*
+				 * 添加失败，可能是由于重复加好友
+				 */
+				this.write(new Info(Message.addFriendFail));
+				playersManager.notifyAddFriendFail(name);
+
+			}
+			break;
+		}
+		case refuseToBecomeFriend: {
+			AddFriendInfo addFriendInfo = (AddFriendInfo) info;
+			String name = addFriendInfo.getName();
+			PlayersManager playersManager = PlayersManager.getInstance();
+			playersManager.refuseToBecomeFriend(this.nickname, this.name, name);
+			break;
+		}
+		case inviteFriendCooperate: {
+
+			InviteFriendInfo inviteFriendInfo = (InviteFriendInfo) info;
+			String name = inviteFriendInfo.getName();
+			PlayersManager playersManager = PlayersManager.getInstance();
+			char success=playersManager.inviteFriendCooprate(this.nickname, this.name,
+					this.RoomID, name);
+			if (success=='a') {
+				/*
+				 * 被邀好友不在线
+				 */
+				this.write(new Info(Message.friendToInvitedCooperateOffline));
+			}else if(success=='b'){
+				/*
+				 * 被邀请的好友已经在该房间里面
+				 */
+				this.write(new Info(Message.friendToInvitedCooperateInRoom));
+			}
+			break;
+		}
+		case agreeInvitedToCooperateGame: {
+
+			InviteFriendInfo inviteFriendInfo = (InviteFriendInfo) info;
+			this.RoomID = inviteFriendInfo.getGameID();
+			RoomsManager roomsManager = RoomsManager.getInstance();
+			Room room = roomsManager.getRoom(this.RoomID);
+			if (room == null) {// 游戏已经开始
+				this.write(new Info(Message.cooperateGameHasStart));
+			} else {
+				char c = room.addPlayer(this);
+				if (c == 'a') {
+					this.GameID = this.RoomID;
+					room.broadcastPlayersInfo();
+				} else {
+					this.write(new Info(Message.cooperateGameEnoughPlayer));
+				}
+			}
+			break;
+		}
+		case refuseInvitedToCooperateGame: {
+			InviteFriendInfo inviteFriendInfo = (InviteFriendInfo) info;
+			String name = inviteFriendInfo.getName();
+			int roomId = inviteFriendInfo.getGameID();
+			/*
+			 * 在玩家退出房间的时候需要初始化gameID
+			 */
+			RoomsManager roomsManager = RoomsManager.getInstance();
+			Room room = roomsManager.getRoom(roomId);
+			// 还需要判断邀请者是否还在原来的房间里
+			PlayersManager playersManager = PlayersManager.getInstance();
+			playersManager.refuseInvitedToCooperateGame(this.nickname,
+					this.name, name, roomId);
+
+			break;
+		}
+		case getSingleHistoryData: {
+			ArrayList<SingleGameHistoryItemInfo> singleGameHistoryItems = new ArrayList<SingleGameHistoryItemInfo>();
+			singleGameHistoryItems = this.singleGameHistoryDataService
+					.getInfo(this.name);
+			Collections.sort(singleGameHistoryItems, new SortByPoint());
+			Info singleGameHistoryInfo = new SingleGameHistoryInfo(
+					singleGameHistoryItems);
+			this.write(singleGameHistoryInfo);
+			break;
+		}
+		case getSingleGameRank: {
+			ArrayList<SingleGameOverallItemInfo> singleGameOverallItemInfos = new ArrayList<SingleGameOverallItemInfo>();
+			SingleOverallItem singleOverallItem = this.singleOverallDataService
+					.getItem(this.name);
+			SingleGameOverallItemInfo singleGameOverallItemInfo = new SingleGameOverallItemInfo(
+					singleOverallItem.getMaxPoint(), this.nickname,
+					this.imageType,this.name);
+			singleGameOverallItemInfos.add(singleGameOverallItemInfo);
+			ArrayList<FriendInfoPO> pos = new ArrayList<FriendInfoPO>();
+			pos = this.relationDataService.getFriendList(this.name);
+			for (FriendInfoPO po : pos) {
+				String id = po.getId();
+				singleOverallItem = this.singleOverallDataService.getItem(id);
+				singleGameOverallItemInfo = new SingleGameOverallItemInfo(
+						singleOverallItem.getMaxPoint(), po.getNickname(),
+						po.getImageType(),po.getId());
+				singleGameOverallItemInfos.add(singleGameOverallItemInfo);
+			}
+			Collections.sort(singleGameOverallItemInfos, new SortByPoint());
+			Info singleGameRankInfo = new SingleGameRankInfo(
+					singleGameOverallItemInfos);
+			this.write(singleGameRankInfo);
+			break;
+		}
+		case getMultiGameRank: {
+			ArrayList<MultiOverallItemInfo> multiOverallItemInfos = new ArrayList<MultiOverallItemInfo>();
+			MultiOverallItem multiOverallItem = this.multiOverallDataService
+					.getItem(this.name);
+			MultiOverallItemInfo multiOverallItemInfo = new MultiOverallItemInfo(
+					this.imageType, multiOverallItem.getCoworker(),
+					multiOverallItem.getMaxPoint(),this.name , this.nickname);
+			multiOverallItemInfos.add(multiOverallItemInfo);
+			ArrayList<FriendInfoPO> pos = new ArrayList<FriendInfoPO>();
+			pos = this.relationDataService.getFriendList(this.name);
+			for (FriendInfoPO po : pos) {
+				String idString = po.getId();
+				multiOverallItem = this.multiOverallDataService
+						.getItem(idString);
+				multiOverallItemInfo = new MultiOverallItemInfo(
+						po.getImageType(), multiOverallItem.getCoworker(),
+						multiOverallItem.getMaxPoint() , po.getId() , po.getNickname());
+				multiOverallItemInfos.add(multiOverallItemInfo);
+
+			}
+			Collections.sort(multiOverallItemInfos, new SortByPoint());
+			Info multiGameRankInfo = new MultiGameRankInfo(
+					multiOverallItemInfos);
+			this.write(multiGameRankInfo);
+			break;
+		}
+		case changeAvatar: {
+			ChangeAvatarInfo changeAvatarInfo = (ChangeAvatarInfo) info;
+			Avatar avatar = changeAvatarInfo.getAvatar();
+			this.setImageType(avatar);
+			if (this.changeAvatar(avatar)) {
+				this.write(new Info(Message.changeAvatarSuc));
+			} else {
+				this.write(new Info(Message.changeAvatarFail));
+			}
+			break;
+		}
+		case canAutoCrash: {
+			GamesManager gamesManager = GamesManager.getInstance();
+			Game game = gamesManager.getGame(this.GameID);
+			game.autoCrash();
+			break;
+
+		}
+		case useProp: {
+			UsePropInfo usePropInfo = (UsePropInfo) info;
+			Position position = usePropInfo.getPosition();
+			GamesManager gamesManager = GamesManager.getInstance();
+			Game game = gamesManager.getGame(this.GameID);
+			game.useProp(position);
+			break;
+
+		}
+		case exitRoom: {
+			/*
+			 * 玩家退出游戏时需要: 1.重置该玩家的gameid 2.将该玩家从房间中删除，同时广播新的房间消息
+			 * 3.此时游戏可能无法开始了（人数不够）
+			 */
+			RoomsManager roomsManager=RoomsManager.getInstance();
+			Room room=roomsManager.getRoom(this.RoomID);
+			if(room!=null){
+				room.removePlayer(this);
+			}
+			break;
+		}
+		default:
+			break;
+		}
+
+	}
+
+	@SuppressWarnings("rawtypes")
+	private class SortByPoint implements Comparator {
+
+		@Override
+		public int compare(Object o1, Object o2) {
+			SingleGameHistoryItemInfo singleGameHistoryItem1 = (SingleGameHistoryItemInfo) o1;
+			SingleGameHistoryItemInfo singleGameHistoryItem2 = (SingleGameHistoryItemInfo) o2;
+			if (singleGameHistoryItem1.getPoint() > singleGameHistoryItem2
+					.getPoint()) {
+				return 1;
+			}
+			return 0;
+		}
+
+	}
+
+	@SuppressWarnings("unchecked")
+	private ArrayList<Friend> getFriendsList() {
+		ArrayList<Friend> friends = new ArrayList<Friend>();
+		ArrayList<FriendInfoPO> friendInfoPOs = new ArrayList<FriendInfoPO>();
+		friendInfoPOs = this.relationDataService.getFriendList(this.name);
+		PlayersManager playersManager = PlayersManager.getInstance();
+		boolean inline = false;
+		for (FriendInfoPO friendInfoPO : friendInfoPOs) {
+			String name = friendInfoPO.getId();
+			if (playersManager.hasPlayer(name)) {
+				inline = true;
+			}
+			ArrayList<SingleGameHistoryItemInfo> singleGameHistoryItems = new ArrayList<SingleGameHistoryItemInfo>();
+			singleGameHistoryItems = this.singleGameHistoryDataService
+					.getInfo(name);
+			Collections.sort(singleGameHistoryItems, new SortByPoint());
+			Friend friend = new Friend(name, friendInfoPO.getBriefIntro(),
+					friendInfoPO.getNickname(), friendInfoPO.getImageType(),
+					friendInfoPO.getCoins(), inline, singleGameHistoryItems);
+			friends.add(friend);
+			inline=false;
+		}
+
+		return friends;
+	}
+
+	private boolean deleteFriend(String name) {
+		RelationPO po = new RelationPO(this.name, name);
+		return this.relationDataService.deleteRecord(po);
+	}
+
+	private boolean becomeFriend(String name) {
+		RelationPO po = new RelationPO(this.name, name);
+		return this.relationDataService.insertRecord(po);
+	}
+
+	public void close() {
+		RoomsManager roomsManager=RoomsManager.getInstance();
+		Room room=roomsManager.getRoom(this.RoomID);
+		if(room!=null){
+			room.removePlayer(this);
+		}
+		GamesManager gamesManager = GamesManager.getInstance();
+		// 每次有人掉线的时候都要判断对应游戏是否还有玩家在玩，如果没有则销毁游戏,而游戏的玩家需要从游戏中排出
+		Game game=gamesManager.getGame(this.GameID);
+		if(game!=null){
+			game.removePlayer(this.ID);
+			if(game.getPlayersNum()==0){
+				game.destroySelf();
+				gamesManager.removeGame(this.GameID);
+			}
+		}
+		
+		PlayersManager playersManager = PlayersManager.getInstance();
+		playersManager.removePlayer(this.ID);
+		this.updateFriendsOnlineInfo();
+		try {
+			this.writer.close();
+			this.socketOut.close();
+			this.socketIn.close();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+	public void updateSingleGameHistory(SingleGameHistoryItemInfo singleGameHistoryItem){
+		this.singleGameHistoryDataService.insertRecord(singleGameHistoryItem, this.name);
+	}
+	public void updateMulGameHistory(MultiGameHistoryItem multiGameHistoryItem){
+		this.multiGameHistoryDataService.insertRecord(multiGameHistoryItem);
+	}
+
+}

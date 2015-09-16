@@ -1,0 +1,58 @@
+package common.gameInfo;
+
+import java.io.Serializable;
+
+public class Position implements Serializable{
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+	private int x,y;
+	private int value;
+	public int getValue() {
+		return value;
+	}
+
+	public void setValue(int value) {
+		this.value = value;
+	}
+
+	public Position(int x,int y){
+		this.setX(x);
+		this.setY(y);
+	}
+	
+	public Position(int x, int y, int value) {
+		this.setX(x);
+		this.setY(y);
+		this.setValue(value);
+	}
+
+	public int getX() {
+		return x;
+	}
+
+	public void setX(int x) {
+		this.x = x;
+	}
+
+	public int getY() {
+		return y;
+	}
+
+	public void setY(int y) {
+		this.y = y;
+	}
+	public void showPosition(){
+		System.out.print("("+x+","+y+")");
+	}
+	public boolean equal(Position p){
+		boolean isEqual=false;
+		if(this.x==p.getX()&&this.y==p.getY()){
+			isEqual=true;
+		}
+		return isEqual;
+	}
+	
+
+}

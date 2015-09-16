@@ -1,0 +1,192 @@
+package businesslogic;
+
+import java.util.ArrayList;
+
+import client.MyClient;
+import view.FriendsPanel;
+import view.MainFrame;
+import common.Info;
+import common.friendInfo.AddFriendInfo;
+import common.friendInfo.DeleteFriendInfo;
+import common.friendInfo.Friend;
+import common.friendInfo.FriendsListInfo;
+import common.friendInfo.NotifyOnlineInfo;
+import common.rankingInfo.SingleGameHistoryItemInfo;
+import enums.Message;
+import businesslogic.managers.FriendsManager;
+import businesslogicService.FriendBLService;
+
+public class FriendBL implements FriendBLService{
+	private MyClient myClient;
+	private MainFrame mainFrame;
+	public void setMainFrame(MainFrame mainFrame) {
+		this.mainFrame = mainFrame;
+	}
+	private FriendsPanel friendsPanel;
+	public void setFriendsPanel(FriendsPanel friendsPanel) {
+		this.friendsPanel = friendsPanel;
+	}
+	public void setMyClient(MyClient myClient) {
+		this.myClient = myClient;
+	}
+	public void getFriendList() {
+		System.out.println("call the getList");
+		if (!this.myClient.write(new Info(Message.getFriendsList))) {
+			this.mainFrame.disconnected();
+		}
+
+	}
+	@Override
+	public Friend getFriendInfo(String id) {
+		FriendsManager friendsManager=FriendsManager.getInstance();
+		return friendsManager.getFriend(id);
+	}
+	public void deleteFriend(String name) {
+		FriendsManager friendsManager=FriendsManager.getInstance();
+		friendsManager.setDeleteFriendName(name);
+		Info deletefriendInfo = new DeleteFriendInfo(name);
+		if (!this.myClient.write(deletefriendInfo)) {
+			/*
+			 * 需要网络连接不正常的界面接口 public void disconnected(){}
+			 */
+			this.mainFrame.disconnected();
+		}
+	}
+	public boolean hasFriend(String name) {
+		FriendsManager friendsManager=FriendsManager.getInstance();
+		return friendsManager.hasFriend(name);
+	}
+	public void addFriend(String name) {
+		Info addFriendInfo = new AddFriendInfo(" ", name);
+		if (!this.myClient.write(addFriendInfo)) {
+			/*
+			 * 需要网络连接不正常的界面接口 public void disconnected(){}
+			 */
+			this.mainFrame.disconnected();
+		}
+	}
+	public void agreeToBecomeFriends(String name) {
+		Info addFriendInfo = new AddFriendInfo("", name);
+		addFriendInfo.setMessage(Message.agreeToBecomeFriend);
+		if (!this.myClient.write(addFriendInfo)) {
+			/*
+			 * 需要网络连接不正常的界面接口 public void disconnected(){}
+			 */
+			this.mainFrame.disconnected();
+		}
+	}
+	public void refuseToBecomeFriend(String name) {
+		Info addFriendInfo = new AddFriendInfo("", name);
+		addFriendInfo.setMessage(Message.refuseToBecomeFriend);
+		if (!this.myClient.write(addFriendInfo)) {
+			/*
+			 * 需要网络连接不正常的界面接口 public void disconnected(){}
+			 */
+			this.mainFrame.disconnected();
+		}
+	}
+	@Override
+	public ArrayList<SingleGameHistoryItemInfo> getFriendHistory(String id) {
+		FriendsManager friendsManager=FriendsManager.getInstance();
+		for(Friend friend : friendsManager.getFriends()){
+			if (friend.getId().equals(id)) {
+				return friend.getSingleGameHistoryItems();
+			}
+		}
+		return null;
+	}
+	@Override
+	public void showFriendsList(FriendsListInfo friendsListInfo) {
+		ArrayList<Friend> friends = new ArrayList<Friend>();
+		friends = friendsListInfo.getFriends();
+		FriendsManager friendsManager=FriendsManager.getInstance();
+		friendsManager.setFriends(friends);
+		/*
+		 * 界面需要实现一个显示好友列表的接口,参数中的ArrayList包含类Friend（类中的内容自己去看） public void
+		 * showFriendsList(ArrayList<Friend> friends){}
+		 */
+		this.friendsPanel.showFriendsList(friends);
+		
+	}
+	@Override
+	public void changeOnlineInfo(NotifyOnlineInfo notifyOnlineInfo) {
+		String id = notifyOnlineInfo.getId();
+		FriendsManager friendsManager=FriendsManager.getInstance();
+		friendsManager.updateOnlineInfo(id);
+		this.friendsPanel.showFriendsList(friendsManager.getFriends());
+		
+	}
+	@Override
+	public void deleteFriendSuc() {
+		FriendsManager friendsManager=FriendsManager.getInstance();
+		friendsManager.deleteFriend();
+		ArrayList<Friend> friends1 = new ArrayList<Friend>();
+		friends1 = friendsManager.getFriends();
+		/*
+		 * 删除好友成功需要的界面接口 public void deleteFriendSuc(){}
+		 * 界面需要实现一个刷新好友列表的接口（和显示是不是一样的？）, 参数中的ArrayList包含类Friend（类中的内容自己去看）
+		 * public void refreshFriendsList(ArrayList<Friend> friends){}
+		 */
+		this.friendsPanel.deleteFriendSuc();
+		System.out.println("Delete Friend Suc---------------");
+		this.friendsPanel.showFriendsList(friends1);
+		
+	}
+	@Override
+	public void deleteFriendFail() {
+		/*
+		 * 需要实现一个删除好友失败的界面接口 public void deleteFriendFail(){}
+		 */
+		this.friendsPanel.deleteFriendFail();
+		
+	}
+	@Override
+	public void friendToAddedOffline() {
+		
+		this.friendsPanel.friendToAddedOffline();
+		
+	}
+	@Override
+	public void askIfBecomeFriend(AddFriendInfo addFriendInfo) {
+		String name = addFriendInfo.getName();
+		String nickname = addFriendInfo.getNickname();
+		/*
+		 * 需要实现一个询问是否和某玩家成为好友的界面接口，参数为另一个玩家的昵称和用户名 public void
+		 * askIfBecomeFriend(String name,String nickname){}
+		 */
+		this.friendsPanel.askIfBecomeFriend(name, nickname);
+		
+	}
+	@Override
+	public void agreeToBecomeFriend(AddFriendInfo agreeToBecomeFriendInfo) {
+		String name1 = agreeToBecomeFriendInfo.getName();
+		String nickname1 = agreeToBecomeFriendInfo.getNickname();
+		/*
+		 * 提供一个显示对方同意与你成为好友你们已经是好友的界面接口，参数为对方昵称和对方用户名 public void
+		 * agreeToBecomeFriend(String nickname,String name){}
+		 */
+		this.friendsPanel.agreeToBecomeFriend(name1,
+				nickname1);
+		this.getFriendList();//自动更新好友列表
+		
+	}
+	@Override
+	public void addFriendFail() {
+		/*
+		 * 需要一个添加好友失败的界面接口，原因可能是重复添加 public void addFriendFail(){}
+		 */
+		this.friendsPanel.addFriendFail();
+		
+	}
+	@Override
+	public void refuseToBecomeFriends(AddFriendInfo addFriendInfo) {
+		/*
+		 * 需要一个显示对方拒绝与你成为好友的界面接口，参数为对方用户名和昵称 public void
+		 * refuseToBecomeFriend(String nickname,String name){}
+		 */
+		this.friendsPanel.refuseToBecomeFriend(addFriendInfo.getNickname(),
+				addFriendInfo.getName());
+		
+	}
+
+}

@@ -1,0 +1,41 @@
+package client;
+
+import common.Info;
+/*
+ * 专门接收处理消息和发送消息的类
+ */
+public class TranMessage implements NetRead{
+	MyClient client;
+	private String ipAdd;//服务器ip地址
+	public String getIpAdd() {
+		return ipAdd;
+	}
+	public void setIpAdd(String ipAdd) {
+		this.ipAdd = ipAdd;
+	}
+	public TranMessage(String ip){
+		this.setIpAdd(ip);
+		client=new MyClient(this.ipAdd,this);
+	}
+	@Override
+	public void readInfo(Info info) {
+		// TODO Auto-generated method stub
+		
+		
+	}
+	public boolean writeInfo(Info info){
+		boolean success=this.client.write(info);
+		return success;
+	}
+	@Override
+	public void serverDead() {
+		// TODO Auto-generated method stub
+		
+	}
+	@Override
+	public void wrongIP() {
+		// TODO Auto-generated method stub
+		
+	}
+
+}

@@ -1,0 +1,25 @@
+package common;
+
+import java.util.ArrayList;
+
+import pos.historyPO.SingleGameHistoryItem;
+
+public class SingleGameHistoryInfo extends Info{
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+	private ArrayList<SingleGameHistoryItem> singleGameHistoryItems=new ArrayList<SingleGameHistoryItem>();
+	public ArrayList<SingleGameHistoryItem> getSingleGameHistoryItems() {
+		return singleGameHistoryItems;
+	}
+	public void setSingleGameHistoryItems(
+			ArrayList<SingleGameHistoryItem> singleGameHistoryItems) {
+		this.singleGameHistoryItems = singleGameHistoryItems;
+	}
+	public SingleGameHistoryInfo(ArrayList<SingleGameHistoryItem> singleGameHistoryItems){
+		super(Message.SingleHistoryData);
+		this.singleGameHistoryItems=singleGameHistoryItems;
+	}
+
+}

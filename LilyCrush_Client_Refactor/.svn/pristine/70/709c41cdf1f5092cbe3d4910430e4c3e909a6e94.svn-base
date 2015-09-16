@@ -1,0 +1,56 @@
+package client;
+
+import common.Info;
+import common.loginInfo.LoginInfo;
+import view.LoginPanel;
+import view.MainFrame;
+import businesslogicService.LoginBLService;
+
+public class LoginBL implements LoginBLService{
+	private LoginPanel loginPanel;
+	private MainFrame mainFrame;
+	private MyClient myClient;
+	public void setMainFrame(MainFrame mainFrame) {
+		this.mainFrame = mainFrame;
+	}
+
+	public void setMyClient(MyClient myClient) {
+		this.myClient = myClient;
+	}
+
+	@Override
+	public void setLoginPanel(LoginPanel loginPanel) {
+		this.loginPanel=loginPanel;
+		
+	}
+
+	@Override
+	public void loginSuc() {
+		this.loginPanel.loginSuccess();
+		
+	}
+
+	@Override
+	public void loginFail() {
+		this.loginPanel.loginFail();
+		
+	}
+
+	@Override
+	public void hasLogin() {
+		// TODO Auto-generated method stub
+		
+	}
+	public void login(String name, String passwd) {
+		Info loginInfo = new LoginInfo(name, passwd);
+		if (!this.myClient.write(loginInfo)) {
+			/*
+			 * 需要网络连接不正常的界面接口 public void disconnected(){}
+			 */
+			this.mainFrame.disconnected();
+		}
+
+	}
+	
+
+}
